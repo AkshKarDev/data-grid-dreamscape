@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import DataGrid, { Column } from '@/components/DataGrid';
 import { sampleEmployees } from '@/data/sampleData';
@@ -6,6 +7,7 @@ import { Button } from '@/components/ui/button';
 
 const Index = () => {
   const [useLargeDataset, setUseLargeDataset] = useState(false);
+  const [streamingEnabled, setStreamingEnabled] = useState(false);
   const currentData = useLargeDataset ? largeSampleEmployees : sampleEmployees;
 
   const columns: Column[] = [
@@ -88,11 +90,10 @@ const Index = () => {
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8 text-center">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-4">
-            Advanced Data Grid
+            Advanced Data Grid with Live Streaming
           </h1>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-6">
-            A powerful data grid component with Web Worker optimization for large datasets, 
-            featuring sorting, filtering, pagination, and row selection capabilities.
+            A powerful data grid with decoupled architecture, inline filtering, and live data streaming capabilities.
           </p>
           
           <div className="flex justify-center gap-4 mb-6">
@@ -108,6 +109,12 @@ const Index = () => {
             >
               Large Dataset (1000 rows)
             </Button>
+            <Button
+              variant={streamingEnabled ? "default" : "outline"}
+              onClick={() => setStreamingEnabled(!streamingEnabled)}
+            >
+              {streamingEnabled ? 'Disable' : 'Enable'} Live Streaming
+            </Button>
           </div>
         </div>
 
@@ -117,22 +124,29 @@ const Index = () => {
             columns={columns}
             pageSize={8}
             selectable={true}
+            streaming={streamingEnabled}
+            streamingInterval={3000}
+            streamingBatchSize={3}
           />
         </div>
 
         <div className="mt-8 text-center">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 max-w-5xl mx-auto">
             <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-800 mb-2">🔄 Sorting</h3>
-              <p className="text-gray-600">Click on column headers to sort data in ascending or descending order.</p>
+              <h3 className="text-lg font-semibold text-gray-800 mb-2">🔍 Inline Filtering</h3>
+              <p className="text-gray-600">Click the search icon in column headers to filter data directly inline.</p>
             </div>
             <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-800 mb-2">🔍 Filtering</h3>
-              <p className="text-gray-600">Use the filter button to search and filter data across multiple columns.</p>
+              <h3 className="text-lg font-semibold text-gray-800 mb-2">🔄 Live Streaming</h3>
+              <p className="text-gray-600">Enable real-time data updates with the streaming toggle button.</p>
             </div>
             <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-800 mb-2">📄 Pagination</h3>
-              <p className="text-gray-600">Navigate through large datasets with built-in pagination controls.</p>
+              <h3 className="text-lg font-semibold text-gray-800 mb-2">⚡ Grid Engine</h3>
+              <p className="text-gray-600">Decoupled architecture allows for efficient data processing and updates.</p>
+            </div>
+            <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-800 mb-2">🚀 Web Workers</h3>
+              <p className="text-gray-600">Automatic optimization for large datasets using background processing.</p>
             </div>
           </div>
         </div>

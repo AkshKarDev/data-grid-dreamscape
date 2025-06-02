@@ -1,9 +1,11 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { ChevronUp, ChevronDown, Filter, Search, Loader2 } from 'lucide-react';
+
+import React from 'react';
+import { ChevronUp, ChevronDown, Loader2, Play, Pause } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
-import { useDataWorker } from '@/hooks/useDataWorker';
+import { useGridEngine } from '@/hooks/useGridEngine';
+import { useDataStreaming } from '@/hooks/useDataStreaming';
+import InlineFilter from './InlineFilter';
 
 export interface Column {
   id: string;
@@ -20,128 +22,58 @@ export interface DataGridProps {
   columns: Column[];
   pageSize?: number;
   selectable?: boolean;
+  streaming?: boolean;
+  streamingInterval?: number;
+  streamingBatchSize?: number;
 }
 
 const DataGrid: React.FC<DataGridProps> = ({
   data,
   columns,
   pageSize = 10,
-  selectable = false
+  selectable = false,
+  streaming = false,
+  streamingInterval = 3000,
+  streamingBatchSize = 5
 }) => {
-  const [sortConfig, setSortConfig] = useState<{
-    key: string;
-    direction: 'asc' | 'desc';
-  } | null>(null);
-  const [filters, setFilters] = useState<Record<string, string>>({});
-  const [currentPage, setCurrentPage] = useState(1);
-  const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set());
-  const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
-  const [showFilters, setShowFilters] = useState(false);
-  const [processedData, setProcessedData] = useState<{
-    filtered: any[];
-    sorted: any[];
-  }>({ filtered: data, sorted: data });
+  const { state, engine, isProcessing } = useGridEngine(data, {
+    pageSize,
+    selectable,
+    useWorkerThreshold: 100
+  });
 
-  const { processData, isProcessing } = useDataWorker();
-
-  // Use Web Worker for data processing when data is large (>100 items)
-  const shouldUseWorker = data.length > 100;
-
-  // Fallback for small datasets - process synchronously
-  const processDataSync = useCallback((
-    sourceData: any[],
-    sortConf: typeof sortConfig,
-    filterConf: Record<string, string>
-  ) => {
-    // Filter data
-    const filtered = sourceData.filter(item => {
-      return Object.entries(filterConf).every(([key, value]) => {
-        if (!value) return true;
-        const itemValue = String(item[key] || '').toLowerCase();
-        return itemValue.includes(value.toLowerCase());
-      });
-    });
-
-    // Sort data
-    let sorted = [...filtered];
-    if (sortConf) {
-      sorted.sort((a, b) => {
-        const aValue = a[sortConf.key];
-        const bValue = b[sortConf.key];
-
-        if (aValue < bValue) {
-          return sortConf.direction === 'asc' ? -1 : 1;
-        }
-        if (aValue > bValue) {
-          return sortConf.direction === 'asc' ? 1 : -1;
-        }
-        return 0;
-      });
+  const { isStreaming, startStreaming, stopStreaming } = useDataStreaming(
+    (newData) => engine?.addData(newData),
+    {
+      interval: streamingInterval,
+      batchSize: streamingBatchSize,
+      enabled: streaming
     }
+  );
 
-    return { filtered, sorted };
-  }, []);
-
-  // Process data when sort/filter changes
-  useEffect(() => {
-    if (shouldUseWorker) {
-      processData(data, sortConfig, filters, (filtered, sorted) => {
-        setProcessedData({ filtered, sorted });
-      });
-    } else {
-      const result = processDataSync(data, sortConfig, filters);
-      setProcessedData(result);
-    }
-  }, [data, sortConfig, filters, shouldUseWorker, processData, processDataSync]);
-
-  const paginatedData = useMemo(() => {
-    const startIndex = (currentPage - 1) * pageSize;
-    return processedData.sorted.slice(startIndex, startIndex + pageSize);
-  }, [processedData.sorted, currentPage, pageSize]);
-
-  const totalPages = Math.ceil(processedData.sorted.length / pageSize);
+  if (!state || !engine) {
+    return <div className="p-4">Loading...</div>;
+  }
 
   const handleSort = (key: string) => {
-    setSortConfig(current => {
-      if (current?.key === key) {
-        return {
-          key,
-          direction: current.direction === 'asc' ? 'desc' : 'asc'
-        };
-      }
-      return { key, direction: 'asc' };
-    });
+    engine.setSort(key);
   };
 
   const handleFilter = (column: string, value: string) => {
-    setFilters(prev => ({
-      ...prev,
-      [column]: value
-    }));
-    setCurrentPage(1);
+    engine.setFilter(column, value);
   };
 
   const handleSelectAll = (checked: boolean) => {
-    if (checked) {
-      setSelectedRows(new Set(paginatedData.map((_, index) => index)));
-    } else {
-      setSelectedRows(new Set());
-    }
+    engine.selectAll(checked);
   };
 
   const handleSelectRow = (index: number, checked: boolean) => {
-    const newSelected = new Set(selectedRows);
-    if (checked) {
-      newSelected.add(index);
-    } else {
-      newSelected.delete(index);
-    }
-    setSelectedRows(newSelected);
+    engine.selectRow(index, checked);
   };
 
   const getSortIcon = (columnId: string) => {
-    if (sortConfig?.key !== columnId) return null;
-    return sortConfig.direction === 'asc' ? (
+    if (state.sortConfig?.key !== columnId) return null;
+    return state.sortConfig.direction === 'asc' ? (
       <ChevronUp className="w-4 h-4" />
     ) : (
       <ChevronDown className="w-4 h-4" />
@@ -157,7 +89,7 @@ const DataGrid: React.FC<DataGridProps> = ({
             <h3 className="text-lg font-semibold text-gray-800">Data Grid</h3>
             <div className="flex items-center gap-2">
               <span className="text-sm text-gray-600">
-                {processedData.sorted.length} rows
+                {state.sortedData.length} rows
               </span>
               {isProcessing && (
                 <div className="flex items-center gap-1 text-sm text-blue-600">
@@ -165,45 +97,34 @@ const DataGrid: React.FC<DataGridProps> = ({
                   Processing...
                 </div>
               )}
-              {shouldUseWorker && !isProcessing && (
+              {state.data.length > 100 && !isProcessing && (
                 <span className="text-xs text-green-600 bg-green-100 px-2 py-1 rounded">
                   Worker Optimized
                 </span>
               )}
             </div>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowFilters(!showFilters)}
-            className="flex items-center gap-2"
-          >
-            <Filter className="w-4 h-4" />
-            Filters
-          </Button>
+          
+          {streaming && (
+            <div className="flex items-center gap-2">
+              <Button
+                variant={isStreaming ? "destructive" : "default"}
+                size="sm"
+                onClick={isStreaming ? stopStreaming : startStreaming}
+                className="flex items-center gap-2"
+              >
+                {isStreaming ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                {isStreaming ? 'Stop Stream' : 'Start Stream'}
+              </Button>
+              {isStreaming && (
+                <span className="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded animate-pulse">
+                  Live Streaming
+                </span>
+              )}
+            </div>
+          )}
         </div>
       </div>
-
-      {/* Filters */}
-      {showFilters && (
-        <div className="bg-gray-50 border-b border-gray-200 p-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {columns
-              .filter(col => col.filterable)
-              .map(column => (
-                <div key={column.id} className="flex items-center gap-2">
-                  <Search className="w-4 h-4 text-gray-400" />
-                  <Input
-                    placeholder={`Filter ${column.header}...`}
-                    value={filters[column.accessor] || ''}
-                    onChange={(e) => handleFilter(column.accessor, e.target.value)}
-                    className="h-8"
-                  />
-                </div>
-              ))}
-          </div>
-        </div>
-      )}
 
       {/* Grid */}
       <div className="overflow-x-auto">
@@ -213,7 +134,7 @@ const DataGrid: React.FC<DataGridProps> = ({
               {selectable && (
                 <th className="w-12 px-4 py-3">
                   <Checkbox
-                    checked={selectedRows.size === paginatedData.length && paginatedData.length > 0}
+                    checked={state.selectedRows.size === state.paginatedData.length && state.paginatedData.length > 0}
                     onCheckedChange={handleSelectAll}
                   />
                 </th>
@@ -223,12 +144,21 @@ const DataGrid: React.FC<DataGridProps> = ({
                   key={column.id}
                   className="px-4 py-3 text-left text-sm font-medium text-gray-700 border-r border-gray-200 last:border-r-0"
                   style={{
-                    width: columnWidths[column.id] || column.width,
+                    width: column.width,
                     minWidth: column.minWidth || 100
                   }}
                 >
                   <div className="flex items-center justify-between">
-                    <span>{column.header}</span>
+                    <div className="flex items-center gap-2">
+                      <span>{column.header}</span>
+                      {column.filterable && (
+                        <InlineFilter
+                          value={state.filters[column.accessor] || ''}
+                          onFilterChange={(value) => handleFilter(column.accessor, value)}
+                          placeholder={`Filter ${column.header}...`}
+                        />
+                      )}
+                    </div>
                     {column.sortable && (
                       <button
                         onClick={() => handleSort(column.accessor)}
@@ -248,7 +178,7 @@ const DataGrid: React.FC<DataGridProps> = ({
             </tr>
           </thead>
           <tbody>
-            {paginatedData.map((row, index) => (
+            {state.paginatedData.map((row, index) => (
               <tr
                 key={row.id || index}
                 className="border-b border-gray-100 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 transition-all duration-200"
@@ -256,7 +186,7 @@ const DataGrid: React.FC<DataGridProps> = ({
                 {selectable && (
                   <td className="px-4 py-3">
                     <Checkbox
-                      checked={selectedRows.has(index)}
+                      checked={state.selectedRows.has(index)}
                       onCheckedChange={(checked) => handleSelectRow(index, checked as boolean)}
                     />
                   </td>
@@ -276,32 +206,32 @@ const DataGrid: React.FC<DataGridProps> = ({
       </div>
 
       {/* Pagination */}
-      {totalPages > 1 && (
+      {state.totalPages > 1 && (
         <div className="bg-gradient-to-r from-gray-50 to-gray-100 border-t border-gray-200 px-4 py-3">
           <div className="flex items-center justify-between">
             <div className="text-sm text-gray-600">
-              Showing {(currentPage - 1) * pageSize + 1} to{' '}
-              {Math.min(currentPage * pageSize, processedData.sorted.length)} of{' '}
-              {processedData.sorted.length} entries
+              Showing {(state.currentPage - 1) * state.pageSize + 1} to{' '}
+              {Math.min(state.currentPage * state.pageSize, state.sortedData.length)} of{' '}
+              {state.sortedData.length} entries
             </div>
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                disabled={currentPage === 1}
+                onClick={() => engine.setPage(state.currentPage - 1)}
+                disabled={state.currentPage === 1}
               >
                 Previous
               </Button>
               <div className="flex items-center gap-1">
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                {Array.from({ length: Math.min(5, state.totalPages) }, (_, i) => {
                   const page = i + 1;
                   return (
                     <Button
                       key={page}
-                      variant={currentPage === page ? "default" : "outline"}
+                      variant={state.currentPage === page ? "default" : "outline"}
                       size="sm"
-                      onClick={() => setCurrentPage(page)}
+                      onClick={() => engine.setPage(page)}
                       className="w-8 h-8 p-0"
                     >
                       {page}
@@ -312,8 +242,8 @@ const DataGrid: React.FC<DataGridProps> = ({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                disabled={currentPage === totalPages}
+                onClick={() => engine.setPage(state.currentPage + 1)}
+                disabled={state.currentPage === state.totalPages}
               >
                 Next
               </Button>
