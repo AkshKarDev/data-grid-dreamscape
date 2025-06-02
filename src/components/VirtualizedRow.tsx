@@ -38,7 +38,7 @@ const VirtualizedRow: React.FC<VirtualizedRowProps> = ({
   return (
     <tr
       style={style}
-      className="border-b border-gray-100 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 transition-all duration-200"
+      className="border-b border-gray-100 dark:border-gray-700 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 dark:hover:from-gray-800 dark:hover:to-gray-700 transition-all duration-200"
     >
       {selectable && (
         <td className="px-4 py-3">
@@ -51,7 +51,7 @@ const VirtualizedRow: React.FC<VirtualizedRowProps> = ({
       {columns.map(column => (
         <td
           key={column.id}
-          className="px-4 py-3 text-sm text-gray-900 border-r border-gray-100 last:border-r-0"
+          className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100 border-r border-gray-100 dark:border-gray-700 last:border-r-0"
         >
           {editable && column.id !== 'id' ? (
             <EditableCell

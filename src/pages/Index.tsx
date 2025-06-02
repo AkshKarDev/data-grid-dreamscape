@@ -98,14 +98,14 @@ const Index = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8 text-center">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-4">
             Advanced Data Grid with Editing & Virtualization
           </h1>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-6">
-            A powerful data grid with inline editing, single/multi-row selection, DOM virtualization, and live streaming.
+          <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto mb-6">
+            A powerful data grid with inline editing, single/multi-row selection, DOM virtualization, live streaming, and dark/light theme support.
           </p>
           
           <div className="flex justify-center gap-4 mb-6 flex-wrap">
@@ -154,21 +154,21 @@ const Index = () => {
 
         <div className="mt-8 text-center">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
-            <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-800 mb-2">✏️ Inline Editing</h3>
-              <p className="text-gray-600">Click on any cell to edit data directly in the grid.</p>
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md border border-gray-200 dark:border-gray-700">
+              <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">✏️ Inline Editing</h3>
+              <p className="text-gray-600 dark:text-gray-400">Click on any cell to edit data directly in the grid.</p>
             </div>
-            <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-800 mb-2">🎯 Selection Modes</h3>
-              <p className="text-gray-600">Choose between single or multiple row selection modes.</p>
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md border border-gray-200 dark:border-gray-700">
+              <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">🎯 Selection Modes</h3>
+              <p className="text-gray-600 dark:text-gray-400">Choose between single or multiple row selection modes.</p>
             </div>
-            <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-800 mb-2">🚀 Virtualization</h3>
-              <p className="text-gray-600">DOM virtualization for smooth performance with large datasets.</p>
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md border border-gray-200 dark:border-gray-700">
+              <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">🚀 Virtualization</h3>
+              <p className="text-gray-600 dark:text-gray-400">DOM virtualization for smooth performance with large datasets.</p>
             </div>
-            <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-800 mb-2">🔄 Live Updates</h3>
-              <p className="text-gray-600">Real-time data streaming with automatic grid updates.</p>
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md border border-gray-200 dark:border-gray-700">
+              <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">🎨 Theme Support</h3>
+              <p className="text-gray-600 dark:text-gray-400">Switch between light and dark themes with full grid support.</p>
             </div>
           </div>
         </div>

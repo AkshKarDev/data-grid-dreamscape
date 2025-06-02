@@ -11,6 +11,7 @@ import GroupingArea from './GroupingArea';
 import GroupedDataRenderer from './GroupedDataRenderer';
 import VirtualScroller from './VirtualScroller';
 import VirtualizedRow from './VirtualizedRow';
+import ThemeToggle from './ThemeToggle';
 
 export interface Column {
   id: string;
@@ -148,24 +149,24 @@ const DataGrid: React.FC<DataGridProps> = ({
   const isPaginated = !showVirtualization && !isGrouped;
 
   return (
-    <div className="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden">
+    <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
       {/* Toolbar */}
-      <div className="bg-gradient-to-r from-blue-50 to-purple-50 border-b border-gray-200 p-4">
+      <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-800 dark:to-gray-900 border-b border-gray-200 dark:border-gray-700 p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <h3 className="text-lg font-semibold text-gray-800">Data Grid</h3>
+            <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">Data Grid</h3>
             <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-600">
+              <span className="text-sm text-gray-600 dark:text-gray-400">
                 {state.sortedData.length} rows
               </span>
               {isProcessing && (
-                <div className="flex items-center gap-1 text-sm text-blue-600">
+                <div className="flex items-center gap-1 text-sm text-blue-600 dark:text-blue-400">
                   <Loader2 className="w-4 h-4 animate-spin" />
                   Processing...
                 </div>
               )}
               {state.data.length > 100 && !isProcessing && (
-                <span className="text-xs text-green-600 bg-green-100 px-2 py-1 rounded">
+                <span className="text-xs text-green-600 bg-green-100 dark:bg-green-900 dark:text-green-400 px-2 py-1 rounded">
                   Worker Optimized
                 </span>
               )}
@@ -173,10 +174,13 @@ const DataGrid: React.FC<DataGridProps> = ({
           </div>
           
           <div className="flex items-center gap-4">
+            {/* Theme toggle */}
+            <ThemeToggle />
+            
             {/* Feature toggles */}
             <div className="flex items-center gap-2">
-              <Edit3 className="w-4 h-4 text-gray-600" />
-              <span className="text-sm text-gray-600">Editing</span>
+              <Edit3 className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+              <span className="text-sm text-gray-600 dark:text-gray-400">Editing</span>
               <Switch
                 checked={editable}
                 onCheckedChange={() => {}}
@@ -208,7 +212,7 @@ const DataGrid: React.FC<DataGridProps> = ({
             )}
             
             <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-600">Virtualized</span>
+              <span className="text-sm text-gray-600 dark:text-gray-400">Virtualized</span>
               <Switch
                 checked={state.virtualizationEnabled}
                 onCheckedChange={handleVirtualizationToggle}
@@ -227,7 +231,7 @@ const DataGrid: React.FC<DataGridProps> = ({
                   {isStreaming ? 'Stop Stream' : 'Start Stream'}
                 </Button>
                 {isStreaming && (
-                  <span className="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded animate-pulse">
+                  <span className="text-xs text-blue-600 bg-blue-100 dark:bg-blue-900 dark:text-blue-400 px-2 py-1 rounded animate-pulse">
                     Live Streaming
                   </span>
                 )}
@@ -251,7 +255,7 @@ const DataGrid: React.FC<DataGridProps> = ({
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
-            <tr className="bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200">
+            <tr className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 border-b border-gray-200 dark:border-gray-600">
               {selectable && (
                 <th className="w-12 px-4 py-3">
                   {state.selectionMode === 'multiple' && (
@@ -265,7 +269,7 @@ const DataGrid: React.FC<DataGridProps> = ({
               {columns.map(column => (
                 <th
                   key={column.id}
-                  className="px-4 py-3 text-left text-sm font-medium text-gray-700 border-r border-gray-200 last:border-r-0 cursor-move"
+                  className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300 border-r border-gray-200 dark:border-gray-600 last:border-r-0 cursor-move"
                   style={{
                     width: column.width,
                     minWidth: column.minWidth || 100
@@ -287,7 +291,7 @@ const DataGrid: React.FC<DataGridProps> = ({
                     {column.sortable && !isGrouped && (
                       <button
                         onClick={() => handleSort(column.accessor)}
-                        className="ml-2 text-gray-400 hover:text-gray-600 transition-colors"
+                        className="ml-2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors"
                       >
                         {getSortIcon(column.accessor) || (
                           <div className="flex flex-col">
@@ -354,9 +358,9 @@ const DataGrid: React.FC<DataGridProps> = ({
 
       {/* Pagination - Only show when not grouped and not virtualized */}
       {isPaginated && state.totalPages > 1 && (
-        <div className="bg-gradient-to-r from-gray-50 to-gray-100 border-t border-gray-200 px-4 py-3">
+        <div className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 border-t border-gray-200 dark:border-gray-600 px-4 py-3">
           <div className="flex items-center justify-between">
-            <div className="text-sm text-gray-600">
+            <div className="text-sm text-gray-600 dark:text-gray-400">
               Showing {(state.currentPage - 1) * state.pageSize + 1} to{' '}
               {Math.min(state.currentPage * state.pageSize, state.sortedData.length)} of{' '}
               {state.sortedData.length} entries
