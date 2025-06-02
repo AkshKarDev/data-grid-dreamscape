@@ -1,4 +1,3 @@
-
 export interface GridState {
   data: any[];
   filteredData: any[];
@@ -10,12 +9,18 @@ export interface GridState {
   pageSize: number;
   selectedRows: Set<number>;
   totalPages: number;
+  editingCell: { rowIndex: number; columnId: string } | null;
+  selectionMode: 'single' | 'multiple';
+  virtualizationEnabled: boolean;
 }
 
 export interface GridConfig {
   pageSize: number;
   selectable: boolean;
   useWorkerThreshold: number;
+  editable: boolean;
+  selectionMode: 'single' | 'multiple';
+  virtualizationEnabled: boolean;
 }
 
 export type GridEngineListener = (state: GridState) => void;
@@ -32,6 +37,9 @@ export class GridEngine {
       pageSize: 10,
       selectable: false,
       useWorkerThreshold: 100,
+      editable: false,
+      selectionMode: 'multiple',
+      virtualizationEnabled: false,
       ...config
     };
 
@@ -45,7 +53,10 @@ export class GridEngine {
       currentPage: 1,
       pageSize: this.config.pageSize,
       selectedRows: new Set(),
-      totalPages: Math.ceil(initialData.length / this.config.pageSize)
+      totalPages: Math.ceil(initialData.length / this.config.pageSize),
+      editingCell: null,
+      selectionMode: this.config.selectionMode,
+      virtualizationEnabled: this.config.virtualizationEnabled
     };
 
     this.initializeWorker();
@@ -89,6 +100,29 @@ export class GridEngine {
     this.processData();
   }
 
+  public updateCell(rowIndex: number, columnId: string, value: any) {
+    const dataIndex = this.getDataIndexFromDisplayIndex(rowIndex);
+    if (dataIndex !== -1) {
+      this.state.data[dataIndex] = { ...this.state.data[dataIndex], [columnId]: value };
+      this.processData();
+    }
+  }
+
+  public startEditing(rowIndex: number, columnId: string) {
+    this.state.editingCell = { rowIndex, columnId };
+    this.notify();
+  }
+
+  public stopEditing() {
+    this.state.editingCell = null;
+    this.notify();
+  }
+
+  private getDataIndexFromDisplayIndex(displayIndex: number): number {
+    const displayRow = this.state.paginatedData[displayIndex];
+    return this.state.data.findIndex(row => row.id === displayRow.id || row === displayRow);
+  }
+
   public setSort(key: string) {
     if (this.state.sortConfig?.key === key) {
       this.state.sortConfig.direction = this.state.sortConfig.direction === 'asc' ? 'desc' : 'asc';
@@ -112,21 +146,46 @@ export class GridEngine {
 
   public selectRow(index: number, selected: boolean) {
     const newSelected = new Set(this.state.selectedRows);
-    if (selected) {
-      newSelected.add(index);
+    
+    if (this.state.selectionMode === 'single') {
+      newSelected.clear();
+      if (selected) {
+        newSelected.add(index);
+      }
     } else {
-      newSelected.delete(index);
+      if (selected) {
+        newSelected.add(index);
+      } else {
+        newSelected.delete(index);
+      }
     }
+    
     this.state.selectedRows = newSelected;
     this.notify();
   }
 
   public selectAll(selected: boolean) {
+    if (this.state.selectionMode === 'single') return;
+    
     if (selected) {
       this.state.selectedRows = new Set(this.state.paginatedData.map((_, i) => i));
     } else {
       this.state.selectedRows = new Set();
     }
+    this.notify();
+  }
+
+  public setSelectionMode(mode: 'single' | 'multiple') {
+    this.state.selectionMode = mode;
+    if (mode === 'single' && this.state.selectedRows.size > 1) {
+      const firstSelected = Array.from(this.state.selectedRows)[0];
+      this.state.selectedRows = new Set([firstSelected]);
+    }
+    this.notify();
+  }
+
+  public enableVirtualization(enabled: boolean) {
+    this.state.virtualizationEnabled = enabled;
     this.notify();
   }
 

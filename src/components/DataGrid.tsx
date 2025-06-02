@@ -1,13 +1,16 @@
 import React from 'react';
-import { ChevronUp, ChevronDown, Loader2, Play, Pause } from 'lucide-react';
+import { ChevronUp, ChevronDown, Loader2, Play, Pause, Edit3, Users, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Switch } from '@/components/ui/switch';
 import { useGridEngine } from '@/hooks/useGridEngine';
 import { useDataStreaming } from '@/hooks/useDataStreaming';
 import { useGrouping } from '@/hooks/useGrouping';
 import InlineFilter from './InlineFilter';
 import GroupingArea from './GroupingArea';
 import GroupedDataRenderer from './GroupedDataRenderer';
+import VirtualScroller from './VirtualScroller';
+import VirtualizedRow from './VirtualizedRow';
 
 export interface Column {
   id: string;
@@ -15,6 +18,7 @@ export interface Column {
   accessor: string;
   sortable?: boolean;
   filterable?: boolean;
+  editable?: boolean;
   width?: number;
   minWidth?: number;
 }
@@ -24,9 +28,13 @@ export interface DataGridProps {
   columns: Column[];
   pageSize?: number;
   selectable?: boolean;
+  editable?: boolean;
   streaming?: boolean;
   streamingInterval?: number;
   streamingBatchSize?: number;
+  virtualized?: boolean;
+  virtualizedHeight?: number;
+  selectionMode?: 'single' | 'multiple';
 }
 
 const DataGrid: React.FC<DataGridProps> = ({
@@ -34,14 +42,21 @@ const DataGrid: React.FC<DataGridProps> = ({
   columns,
   pageSize = 10,
   selectable = false,
+  editable = false,
   streaming = false,
   streamingInterval = 3000,
-  streamingBatchSize = 5
+  streamingBatchSize = 5,
+  virtualized = false,
+  virtualizedHeight = 400,
+  selectionMode = 'multiple'
 }) => {
   const { state, engine, isProcessing } = useGridEngine(data, {
     pageSize,
     selectable,
-    useWorkerThreshold: 100
+    useWorkerThreshold: 100,
+    editable,
+    selectionMode,
+    virtualizationEnabled: virtualized
   });
 
   const { isStreaming, startStreaming, stopStreaming } = useDataStreaming(
@@ -103,12 +118,34 @@ const DataGrid: React.FC<DataGridProps> = ({
     );
   };
 
+  const handleStartEditing = (rowIndex: number, columnId: string) => {
+    engine.startEditing(rowIndex, columnId);
+  };
+
+  const handleStopEditing = () => {
+    engine.stopEditing();
+  };
+
+  const handleUpdateCell = (rowIndex: number, columnId: string, value: any) => {
+    engine.updateCell(rowIndex, columnId, value);
+  };
+
+  const handleSelectionModeChange = (mode: 'single' | 'multiple') => {
+    engine.setSelectionMode(mode);
+  };
+
+  const handleVirtualizationToggle = (enabled: boolean) => {
+    engine.enableVirtualization(enabled);
+  };
+
   const columnHeaders = columns.reduce((acc, col) => {
     acc[col.id] = col.header;
     return acc;
   }, {} as Record<string, string>);
 
   const isGrouped = groupedColumns.length > 0;
+  const showVirtualization = state.virtualizationEnabled && !isGrouped;
+  const isPaginated = !showVirtualization && !isGrouped;
 
   return (
     <div className="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden">
@@ -135,24 +172,68 @@ const DataGrid: React.FC<DataGridProps> = ({
             </div>
           </div>
           
-          {streaming && (
+          <div className="flex items-center gap-4">
+            {/* Feature toggles */}
             <div className="flex items-center gap-2">
-              <Button
-                variant={isStreaming ? "destructive" : "default"}
-                size="sm"
-                onClick={isStreaming ? stopStreaming : startStreaming}
-                className="flex items-center gap-2"
-              >
-                {isStreaming ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-                {isStreaming ? 'Stop Stream' : 'Start Stream'}
-              </Button>
-              {isStreaming && (
-                <span className="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded animate-pulse">
-                  Live Streaming
-                </span>
-              )}
+              <Edit3 className="w-4 h-4 text-gray-600" />
+              <span className="text-sm text-gray-600">Editing</span>
+              <Switch
+                checked={editable}
+                onCheckedChange={() => {}}
+                disabled
+              />
             </div>
-          )}
+            
+            {selectable && (
+              <div className="flex items-center gap-2">
+                <Button
+                  variant={state.selectionMode === 'single' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => handleSelectionModeChange('single')}
+                  className="flex items-center gap-1"
+                >
+                  <User className="w-4 h-4" />
+                  Single
+                </Button>
+                <Button
+                  variant={state.selectionMode === 'multiple' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => handleSelectionModeChange('multiple')}
+                  className="flex items-center gap-1"
+                >
+                  <Users className="w-4 h-4" />
+                  Multi
+                </Button>
+              </div>
+            )}
+            
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-600">Virtualized</span>
+              <Switch
+                checked={state.virtualizationEnabled}
+                onCheckedChange={handleVirtualizationToggle}
+              />
+            </div>
+            
+            {streaming && (
+              <div className="flex items-center gap-2">
+                <Button
+                  variant={isStreaming ? "destructive" : "default"}
+                  size="sm"
+                  onClick={isStreaming ? stopStreaming : startStreaming}
+                  className="flex items-center gap-2"
+                >
+                  {isStreaming ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                  {isStreaming ? 'Stop Stream' : 'Start Stream'}
+                </Button>
+                {isStreaming && (
+                  <span className="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded animate-pulse">
+                    Live Streaming
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -173,10 +254,12 @@ const DataGrid: React.FC<DataGridProps> = ({
             <tr className="bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200">
               {selectable && (
                 <th className="w-12 px-4 py-3">
-                  <Checkbox
-                    checked={state.selectedRows.size === state.paginatedData.length && state.paginatedData.length > 0}
-                    onCheckedChange={handleSelectAll}
-                  />
+                  {state.selectionMode === 'multiple' && (
+                    <Checkbox
+                      checked={state.selectedRows.size === state.paginatedData.length && state.paginatedData.length > 0}
+                      onCheckedChange={handleSelectAll}
+                    />
+                  )}
                 </th>
               )}
               {columns.map(column => (
@@ -219,44 +302,58 @@ const DataGrid: React.FC<DataGridProps> = ({
               ))}
             </tr>
           </thead>
-          <tbody>
-            {isGrouped && groupedData ? (
-              <GroupedDataRenderer
-                groupedData={groupedData}
-                columns={columns}
-                groupedColumns={groupedColumns}
-              />
-            ) : (
-              state.paginatedData.map((row, index) => (
-                <tr
-                  key={row.id || index}
-                  className="border-b border-gray-100 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 transition-all duration-200"
-                >
-                  {selectable && (
-                    <td className="px-4 py-3">
-                      <Checkbox
-                        checked={state.selectedRows.has(index)}
-                        onCheckedChange={(checked) => handleSelectRow(index, checked as boolean)}
-                      />
-                    </td>
-                  )}
-                  {columns.map(column => (
-                    <td
-                      key={column.id}
-                      className="px-4 py-3 text-sm text-gray-900 border-r border-gray-100 last:border-r-0"
-                    >
-                      {row[column.accessor]}
-                    </td>
-                  ))}
-                </tr>
-              ))
-            )}
-          </tbody>
+          {!showVirtualization && (
+            <tbody>
+              {isGrouped && groupedData ? (
+                <GroupedDataRenderer
+                  groupedData={groupedData}
+                  columns={columns}
+                  groupedColumns={groupedColumns}
+                />
+              ) : (
+                state.paginatedData.map((row, index) => (
+                  <VirtualizedRow
+                    key={row.id || index}
+                    row={row}
+                    index={index}
+                    columns={columns}
+                    selected={state.selectedRows.has(index)}
+                    selectable={selectable}
+                    editable={editable}
+                    editingCell={state.editingCell}
+                    selectionMode={state.selectionMode}
+                    onSelectRow={handleSelectRow}
+                    onStartEditing={handleStartEditing}
+                    onStopEditing={handleStopEditing}
+                    onUpdateCell={handleUpdateCell}
+                  />
+                ))
+              )}
+            </tbody>
+          )}
         </table>
+        
+        {/* Virtualized Rows */}
+        {showVirtualization && (
+          <VirtualScroller
+            data={state.sortedData}
+            columns={columns}
+            containerHeight={virtualizedHeight}
+            selectedRows={state.selectedRows}
+            selectable={selectable}
+            editable={editable}
+            editingCell={state.editingCell}
+            selectionMode={state.selectionMode}
+            onSelectRow={handleSelectRow}
+            onStartEditing={handleStartEditing}
+            onStopEditing={handleStopEditing}
+            onUpdateCell={handleUpdateCell}
+          />
+        )}
       </div>
 
-      {/* Pagination - Only show when not grouped */}
-      {!isGrouped && state.totalPages > 1 && (
+      {/* Pagination - Only show when not grouped and not virtualized */}
+      {isPaginated && state.totalPages > 1 && (
         <div className="bg-gradient-to-r from-gray-50 to-gray-100 border-t border-gray-200 px-4 py-3">
           <div className="flex items-center justify-between">
             <div className="text-sm text-gray-600">

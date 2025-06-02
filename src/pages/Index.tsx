@@ -8,6 +8,10 @@ import { Button } from '@/components/ui/button';
 const Index = () => {
   const [useLargeDataset, setUseLargeDataset] = useState(false);
   const [streamingEnabled, setStreamingEnabled] = useState(false);
+  const [editingEnabled, setEditingEnabled] = useState(true);
+  const [virtualizationEnabled, setVirtualizationEnabled] = useState(false);
+  const [selectionMode, setSelectionMode] = useState<'single' | 'multiple'>('multiple');
+  
   const currentData = useLargeDataset ? largeSampleEmployees : sampleEmployees;
 
   const columns: Column[] = [
@@ -17,6 +21,7 @@ const Index = () => {
       accessor: 'name',
       sortable: true,
       filterable: true,
+      editable: true,
       width: 200,
       minWidth: 150
     },
@@ -26,6 +31,7 @@ const Index = () => {
       accessor: 'email',
       sortable: true,
       filterable: true,
+      editable: true,
       width: 250,
       minWidth: 200
     },
@@ -35,6 +41,7 @@ const Index = () => {
       accessor: 'department',
       sortable: true,
       filterable: true,
+      editable: true,
       width: 150,
       minWidth: 120
     },
@@ -44,6 +51,7 @@ const Index = () => {
       accessor: 'position',
       sortable: true,
       filterable: true,
+      editable: true,
       width: 200,
       minWidth: 150
     },
@@ -53,6 +61,7 @@ const Index = () => {
       accessor: 'salary',
       sortable: true,
       filterable: false,
+      editable: true,
       width: 120,
       minWidth: 100
     },
@@ -62,6 +71,7 @@ const Index = () => {
       accessor: 'startDate',
       sortable: true,
       filterable: false,
+      editable: false,
       width: 120,
       minWidth: 100
     },
@@ -71,6 +81,7 @@ const Index = () => {
       accessor: 'status',
       sortable: true,
       filterable: true,
+      editable: true,
       width: 100,
       minWidth: 80
     },
@@ -80,6 +91,7 @@ const Index = () => {
       accessor: 'location',
       sortable: true,
       filterable: true,
+      editable: true,
       width: 150,
       minWidth: 120
     }
@@ -90,13 +102,13 @@ const Index = () => {
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8 text-center">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-4">
-            Advanced Data Grid with Live Streaming
+            Advanced Data Grid with Editing & Virtualization
           </h1>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-6">
-            A powerful data grid with decoupled architecture, inline filtering, and live data streaming capabilities.
+            A powerful data grid with inline editing, single/multi-row selection, DOM virtualization, and live streaming.
           </p>
           
-          <div className="flex justify-center gap-4 mb-6">
+          <div className="flex justify-center gap-4 mb-6 flex-wrap">
             <Button
               variant={!useLargeDataset ? "default" : "outline"}
               onClick={() => setUseLargeDataset(false)}
@@ -115,6 +127,12 @@ const Index = () => {
             >
               {streamingEnabled ? 'Disable' : 'Enable'} Live Streaming
             </Button>
+            <Button
+              variant={virtualizationEnabled ? "default" : "outline"}
+              onClick={() => setVirtualizationEnabled(!virtualizationEnabled)}
+            >
+              {virtualizationEnabled ? 'Disable' : 'Enable'} Virtualization
+            </Button>
           </div>
         </div>
 
@@ -124,29 +142,33 @@ const Index = () => {
             columns={columns}
             pageSize={8}
             selectable={true}
+            editable={editingEnabled}
             streaming={streamingEnabled}
             streamingInterval={3000}
             streamingBatchSize={3}
+            virtualized={virtualizationEnabled}
+            virtualizedHeight={500}
+            selectionMode={selectionMode}
           />
         </div>
 
         <div className="mt-8 text-center">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 max-w-5xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
             <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-800 mb-2">🔍 Inline Filtering</h3>
-              <p className="text-gray-600">Click the search icon in column headers to filter data directly inline.</p>
+              <h3 className="text-lg font-semibold text-gray-800 mb-2">✏️ Inline Editing</h3>
+              <p className="text-gray-600">Click on any cell to edit data directly in the grid.</p>
             </div>
             <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-800 mb-2">🔄 Live Streaming</h3>
-              <p className="text-gray-600">Enable real-time data updates with the streaming toggle button.</p>
+              <h3 className="text-lg font-semibold text-gray-800 mb-2">🎯 Selection Modes</h3>
+              <p className="text-gray-600">Choose between single or multiple row selection modes.</p>
             </div>
             <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-800 mb-2">⚡ Grid Engine</h3>
-              <p className="text-gray-600">Decoupled architecture allows for efficient data processing and updates.</p>
+              <h3 className="text-lg font-semibold text-gray-800 mb-2">🚀 Virtualization</h3>
+              <p className="text-gray-600">DOM virtualization for smooth performance with large datasets.</p>
             </div>
             <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-800 mb-2">🚀 Web Workers</h3>
-              <p className="text-gray-600">Automatic optimization for large datasets using background processing.</p>
+              <h3 className="text-lg font-semibold text-gray-800 mb-2">🔄 Live Updates</h3>
+              <p className="text-gray-600">Real-time data streaming with automatic grid updates.</p>
             </div>
           </div>
         </div>
