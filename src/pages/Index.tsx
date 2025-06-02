@@ -1,9 +1,13 @@
-
-import React from 'react';
+import React, { useState } from 'react';
 import DataGrid, { Column } from '@/components/DataGrid';
 import { sampleEmployees } from '@/data/sampleData';
+import { largeSampleEmployees } from '@/data/largeSampleData';
+import { Button } from '@/components/ui/button';
 
 const Index = () => {
+  const [useLargeDataset, setUseLargeDataset] = useState(false);
+  const currentData = useLargeDataset ? largeSampleEmployees : sampleEmployees;
+
   const columns: Column[] = [
     {
       id: 'name',
@@ -86,15 +90,30 @@ const Index = () => {
           <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-4">
             Advanced Data Grid
           </h1>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            A powerful data grid component inspired by AgGrid, featuring sorting, filtering, 
-            pagination, and row selection capabilities.
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-6">
+            A powerful data grid component with Web Worker optimization for large datasets, 
+            featuring sorting, filtering, pagination, and row selection capabilities.
           </p>
+          
+          <div className="flex justify-center gap-4 mb-6">
+            <Button
+              variant={!useLargeDataset ? "default" : "outline"}
+              onClick={() => setUseLargeDataset(false)}
+            >
+              Small Dataset (20 rows)
+            </Button>
+            <Button
+              variant={useLargeDataset ? "default" : "outline"}
+              onClick={() => setUseLargeDataset(true)}
+            >
+              Large Dataset (1000 rows)
+            </Button>
+          </div>
         </div>
 
         <div className="max-w-7xl mx-auto">
           <DataGrid
-            data={sampleEmployees}
+            data={currentData}
             columns={columns}
             pageSize={8}
             selectable={true}

@@ -1,9 +1,9 @@
-
-import React, { useState, useMemo } from 'react';
-import { ChevronUp, ChevronDown, Filter, Search } from 'lucide-react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { ChevronUp, ChevronDown, Filter, Search, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
+import { useDataWorker } from '@/hooks/useDataWorker';
 
 export interface Column {
   id: string;
@@ -37,40 +37,69 @@ const DataGrid: React.FC<DataGridProps> = ({
   const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set());
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
   const [showFilters, setShowFilters] = useState(false);
+  const [processedData, setProcessedData] = useState<{
+    filtered: any[];
+    sorted: any[];
+  }>({ filtered: data, sorted: data });
 
-  const filteredData = useMemo(() => {
-    return data.filter(item => {
-      return Object.entries(filters).every(([key, value]) => {
+  const { processData, isProcessing } = useDataWorker();
+
+  // Use Web Worker for data processing when data is large (>100 items)
+  const shouldUseWorker = data.length > 100;
+
+  // Fallback for small datasets - process synchronously
+  const processDataSync = useCallback((
+    sourceData: any[],
+    sortConf: typeof sortConfig,
+    filterConf: Record<string, string>
+  ) => {
+    // Filter data
+    const filtered = sourceData.filter(item => {
+      return Object.entries(filterConf).every(([key, value]) => {
         if (!value) return true;
         const itemValue = String(item[key] || '').toLowerCase();
         return itemValue.includes(value.toLowerCase());
       });
     });
-  }, [data, filters]);
 
-  const sortedData = useMemo(() => {
-    if (!sortConfig) return filteredData;
+    // Sort data
+    let sorted = [...filtered];
+    if (sortConf) {
+      sorted.sort((a, b) => {
+        const aValue = a[sortConf.key];
+        const bValue = b[sortConf.key];
 
-    return [...filteredData].sort((a, b) => {
-      const aValue = a[sortConfig.key];
-      const bValue = b[sortConfig.key];
+        if (aValue < bValue) {
+          return sortConf.direction === 'asc' ? -1 : 1;
+        }
+        if (aValue > bValue) {
+          return sortConf.direction === 'asc' ? 1 : -1;
+        }
+        return 0;
+      });
+    }
 
-      if (aValue < bValue) {
-        return sortConfig.direction === 'asc' ? -1 : 1;
-      }
-      if (aValue > bValue) {
-        return sortConfig.direction === 'asc' ? 1 : -1;
-      }
-      return 0;
-    });
-  }, [filteredData, sortConfig]);
+    return { filtered, sorted };
+  }, []);
+
+  // Process data when sort/filter changes
+  useEffect(() => {
+    if (shouldUseWorker) {
+      processData(data, sortConfig, filters, (filtered, sorted) => {
+        setProcessedData({ filtered, sorted });
+      });
+    } else {
+      const result = processDataSync(data, sortConfig, filters);
+      setProcessedData(result);
+    }
+  }, [data, sortConfig, filters, shouldUseWorker, processData, processDataSync]);
 
   const paginatedData = useMemo(() => {
     const startIndex = (currentPage - 1) * pageSize;
-    return sortedData.slice(startIndex, startIndex + pageSize);
-  }, [sortedData, currentPage, pageSize]);
+    return processedData.sorted.slice(startIndex, startIndex + pageSize);
+  }, [processedData.sorted, currentPage, pageSize]);
 
-  const totalPages = Math.ceil(sortedData.length / pageSize);
+  const totalPages = Math.ceil(processedData.sorted.length / pageSize);
 
   const handleSort = (key: string) => {
     setSortConfig(current => {
@@ -126,9 +155,22 @@ const DataGrid: React.FC<DataGridProps> = ({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <h3 className="text-lg font-semibold text-gray-800">Data Grid</h3>
-            <span className="text-sm text-gray-600">
-              {sortedData.length} rows
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-600">
+                {processedData.sorted.length} rows
+              </span>
+              {isProcessing && (
+                <div className="flex items-center gap-1 text-sm text-blue-600">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Processing...
+                </div>
+              )}
+              {shouldUseWorker && !isProcessing && (
+                <span className="text-xs text-green-600 bg-green-100 px-2 py-1 rounded">
+                  Worker Optimized
+                </span>
+              )}
+            </div>
           </div>
           <Button
             variant="outline"
@@ -208,7 +250,7 @@ const DataGrid: React.FC<DataGridProps> = ({
           <tbody>
             {paginatedData.map((row, index) => (
               <tr
-                key={index}
+                key={row.id || index}
                 className="border-b border-gray-100 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 transition-all duration-200"
               >
                 {selectable && (
@@ -239,8 +281,8 @@ const DataGrid: React.FC<DataGridProps> = ({
           <div className="flex items-center justify-between">
             <div className="text-sm text-gray-600">
               Showing {(currentPage - 1) * pageSize + 1} to{' '}
-              {Math.min(currentPage * pageSize, sortedData.length)} of{' '}
-              {sortedData.length} entries
+              {Math.min(currentPage * pageSize, processedData.sorted.length)} of{' '}
+              {processedData.sorted.length} entries
             </div>
             <div className="flex items-center gap-2">
               <Button
