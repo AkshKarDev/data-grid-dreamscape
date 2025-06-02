@@ -1,11 +1,13 @@
-
 import React from 'react';
 import { ChevronUp, ChevronDown, Loader2, Play, Pause } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useGridEngine } from '@/hooks/useGridEngine';
 import { useDataStreaming } from '@/hooks/useDataStreaming';
+import { useGrouping } from '@/hooks/useGrouping';
 import InlineFilter from './InlineFilter';
+import GroupingArea from './GroupingArea';
+import GroupedDataRenderer from './GroupedDataRenderer';
 
 export interface Column {
   id: string;
@@ -51,6 +53,14 @@ const DataGrid: React.FC<DataGridProps> = ({
     }
   );
 
+  const {
+    groupedColumns,
+    groupedData,
+    addGroupColumn,
+    removeGroupColumn,
+    clearAllGroups
+  } = useGrouping(state?.sortedData || []);
+
   if (!state || !engine) {
     return <div className="p-4">Loading...</div>;
   }
@@ -71,6 +81,19 @@ const DataGrid: React.FC<DataGridProps> = ({
     engine.selectRow(index, checked);
   };
 
+  const handleDragStart = (e: React.DragEvent, columnId: string) => {
+    e.dataTransfer.setData('text/plain', columnId);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    const columnId = e.dataTransfer.getData('text/plain');
+    if (columnId) {
+      addGroupColumn(columnId);
+    }
+  };
+
   const getSortIcon = (columnId: string) => {
     if (state.sortConfig?.key !== columnId) return null;
     return state.sortConfig.direction === 'asc' ? (
@@ -79,6 +102,13 @@ const DataGrid: React.FC<DataGridProps> = ({
       <ChevronDown className="w-4 h-4" />
     );
   };
+
+  const columnHeaders = columns.reduce((acc, col) => {
+    acc[col.id] = col.header;
+    return acc;
+  }, {} as Record<string, string>);
+
+  const isGrouped = groupedColumns.length > 0;
 
   return (
     <div className="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden">
@@ -126,6 +156,16 @@ const DataGrid: React.FC<DataGridProps> = ({
         </div>
       </div>
 
+      {/* Grouping Area */}
+      <div onDrop={handleDrop} onDragOver={(e) => e.preventDefault()}>
+        <GroupingArea
+          groupedColumns={groupedColumns}
+          columnHeaders={columnHeaders}
+          onRemoveGroup={removeGroupColumn}
+          onClearAll={clearAllGroups}
+        />
+      </div>
+
       {/* Grid */}
       <div className="overflow-x-auto">
         <table className="w-full">
@@ -142,16 +182,18 @@ const DataGrid: React.FC<DataGridProps> = ({
               {columns.map(column => (
                 <th
                   key={column.id}
-                  className="px-4 py-3 text-left text-sm font-medium text-gray-700 border-r border-gray-200 last:border-r-0"
+                  className="px-4 py-3 text-left text-sm font-medium text-gray-700 border-r border-gray-200 last:border-r-0 cursor-move"
                   style={{
                     width: column.width,
                     minWidth: column.minWidth || 100
                   }}
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, column.id)}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span>{column.header}</span>
-                      {column.filterable && (
+                      {column.filterable && !isGrouped && (
                         <InlineFilter
                           value={state.filters[column.accessor] || ''}
                           onFilterChange={(value) => handleFilter(column.accessor, value)}
@@ -159,7 +201,7 @@ const DataGrid: React.FC<DataGridProps> = ({
                         />
                       )}
                     </div>
-                    {column.sortable && (
+                    {column.sortable && !isGrouped && (
                       <button
                         onClick={() => handleSort(column.accessor)}
                         className="ml-2 text-gray-400 hover:text-gray-600 transition-colors"
@@ -178,35 +220,43 @@ const DataGrid: React.FC<DataGridProps> = ({
             </tr>
           </thead>
           <tbody>
-            {state.paginatedData.map((row, index) => (
-              <tr
-                key={row.id || index}
-                className="border-b border-gray-100 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 transition-all duration-200"
-              >
-                {selectable && (
-                  <td className="px-4 py-3">
-                    <Checkbox
-                      checked={state.selectedRows.has(index)}
-                      onCheckedChange={(checked) => handleSelectRow(index, checked as boolean)}
-                    />
-                  </td>
-                )}
-                {columns.map(column => (
-                  <td
-                    key={column.id}
-                    className="px-4 py-3 text-sm text-gray-900 border-r border-gray-100 last:border-r-0"
-                  >
-                    {row[column.accessor]}
-                  </td>
-                ))}
-              </tr>
-            ))}
+            {isGrouped && groupedData ? (
+              <GroupedDataRenderer
+                groupedData={groupedData}
+                columns={columns}
+                groupedColumns={groupedColumns}
+              />
+            ) : (
+              state.paginatedData.map((row, index) => (
+                <tr
+                  key={row.id || index}
+                  className="border-b border-gray-100 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 transition-all duration-200"
+                >
+                  {selectable && (
+                    <td className="px-4 py-3">
+                      <Checkbox
+                        checked={state.selectedRows.has(index)}
+                        onCheckedChange={(checked) => handleSelectRow(index, checked as boolean)}
+                      />
+                    </td>
+                  )}
+                  {columns.map(column => (
+                    <td
+                      key={column.id}
+                      className="px-4 py-3 text-sm text-gray-900 border-r border-gray-100 last:border-r-0"
+                    >
+                      {row[column.accessor]}
+                    </td>
+                  ))}
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
 
-      {/* Pagination */}
-      {state.totalPages > 1 && (
+      {/* Pagination - Only show when not grouped */}
+      {!isGrouped && state.totalPages > 1 && (
         <div className="bg-gradient-to-r from-gray-50 to-gray-100 border-t border-gray-200 px-4 py-3">
           <div className="flex items-center justify-between">
             <div className="text-sm text-gray-600">
