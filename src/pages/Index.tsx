@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import ReusableDataGrid from '@/components/ReusableDataGrid';
 import { Column, DataGridConfig, DataGridEvents } from '@/types/DataGridTypes';
@@ -6,6 +5,8 @@ import { sampleEmployees } from '@/data/sampleData';
 import { largeSampleEmployees } from '@/data/largeSampleData';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { ArrowRight, Database } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const Index = () => {
   const [useLargeDataset, setUseLargeDataset] = useState(false);
@@ -218,6 +219,13 @@ const Index = () => {
             >
               Large Dataset (1000 rows)
             </Button>
+            <Link to="/large-demo">
+              <Button variant="secondary" className="flex items-center gap-2">
+                <Database className="w-4 h-4" />
+                Massive Dataset Demo
+                <ArrowRight className="w-4 h-4" />
+              </Button>
+            </Link>
           </div>
         </div>
 

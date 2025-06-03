@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { ChevronRight, ChevronDown } from 'lucide-react';
-import { Column } from './DataGrid';
+import { Column } from '@/types/DataGridTypes';
 import { GroupedData } from '@/hooks/useGrouping';
 
 interface GroupedDataRendererProps {

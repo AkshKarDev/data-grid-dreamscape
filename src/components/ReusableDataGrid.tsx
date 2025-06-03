@@ -1,5 +1,4 @@
-
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ChevronUp, ChevronDown, Loader2, Play, Pause, Edit3, Users, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -13,17 +12,22 @@ import GroupedDataRenderer from './GroupedDataRenderer';
 import VirtualScroller from './VirtualScroller';
 import VirtualizedRow from './VirtualizedRow';
 import ThemeToggle from './ThemeToggle';
+import ColumnChooser from './ColumnChooser';
 import { DataGridProvider, useDataGridContext } from '@/providers/DataGridProvider';
 import { DataGridProps, DataGridConfig } from '@/types/DataGridTypes';
 
 const DataGridContent: React.FC<DataGridProps> = ({
   data,
-  columns,
+  columns: allColumns,
   config = {},
   className = '',
   loading = false,
   error
 }) => {
+  const [visibleColumnIds, setVisibleColumnIds] = useState<string[]>(
+    allColumns.slice(0, 8).map(col => col.id) // Show first 8 columns by default
+  );
+
   const {
     pageSize = 10,
     selectable = false,
@@ -40,6 +44,8 @@ const DataGridContent: React.FC<DataGridProps> = ({
     showToolbar = true,
     showPagination = true
   } = config;
+
+  const columns = allColumns.filter(col => visibleColumnIds.includes(col.id));
 
   const { 
     emitRowSelect, 
@@ -81,6 +87,20 @@ const DataGridContent: React.FC<DataGridProps> = ({
     removeGroupColumn,
     clearAllGroups
   } = useGrouping(state?.sortedData || []);
+
+  const handleToggleColumn = (columnId: string) => {
+    setVisibleColumnIds(prev => {
+      if (prev.includes(columnId)) {
+        return prev.filter(id => id !== columnId);
+      } else {
+        return [...prev, columnId];
+      }
+    });
+  };
+
+  const handleResetColumns = () => {
+    setVisibleColumnIds(allColumns.map(col => col.id));
+  };
 
   // Emit events when state changes
   useEffect(() => {
@@ -190,7 +210,7 @@ const DataGridContent: React.FC<DataGridProps> = ({
     emitPageChange(page, state.pageSize);
   };
 
-  const columnHeaders = columns.reduce((acc, col) => {
+  const columnHeaders = allColumns.reduce((acc, col) => {
     acc[col.id] = col.header;
     return acc;
   }, {} as Record<string, string>);
@@ -204,12 +224,12 @@ const DataGridContent: React.FC<DataGridProps> = ({
       {/* Toolbar */}
       {showToolbar && (
         <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-800 dark:to-gray-900 border-b border-gray-200 dark:border-gray-700 p-4">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-4">
             <div className="flex items-center gap-4">
               <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">Data Grid</h3>
               <div className="flex items-center gap-2">
                 <span className="text-sm text-gray-600 dark:text-gray-400">
-                  {state.sortedData.length} rows
+                  {state.sortedData.length} rows, {allColumns.length} columns
                 </span>
                 {isProcessing && (
                   <div className="flex items-center gap-1 text-sm text-blue-600 dark:text-blue-400">
@@ -220,7 +240,14 @@ const DataGridContent: React.FC<DataGridProps> = ({
               </div>
             </div>
             
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 flex-wrap">
+              <ColumnChooser
+                allColumns={allColumns}
+                visibleColumns={visibleColumnIds}
+                onToggleColumn={handleToggleColumn}
+                onResetColumns={handleResetColumns}
+              />
+              
               <ThemeToggle />
               
               {editable && (
