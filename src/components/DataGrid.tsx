@@ -256,7 +256,7 @@ const DataGrid: React.FC<DataGridProps> = ({
         <table className="w-full">
           <thead>
             <tr className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 border-b border-gray-200 dark:border-gray-600">
-              {selectable && (
+              {selectable && !isGrouped && (
                 <th className="w-12 px-4 py-3">
                   {state.selectionMode === 'multiple' && (
                     <Checkbox
@@ -266,44 +266,58 @@ const DataGrid: React.FC<DataGridProps> = ({
                   )}
                 </th>
               )}
-              {columns.map(column => (
-                <th
-                  key={column.id}
-                  className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300 border-r border-gray-200 dark:border-gray-600 last:border-r-0 cursor-move"
-                  style={{
-                    width: column.width,
-                    minWidth: column.minWidth || 100
-                  }}
-                  draggable
-                  onDragStart={(e) => handleDragStart(e, column.id)}
+              {isGrouped ? (
+                <th 
+                  className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300"
+                  colSpan={columns.length + (selectable ? 1 : 0)}
                 >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span>{column.header}</span>
-                      {column.filterable && !isGrouped && (
-                        <InlineFilter
-                          value={state.filters[column.accessor] || ''}
-                          onFilterChange={(value) => handleFilter(column.accessor, value)}
-                          placeholder={`Filter ${column.header}...`}
-                        />
-                      )}
-                    </div>
-                    {column.sortable && !isGrouped && (
-                      <button
-                        onClick={() => handleSort(column.accessor)}
-                        className="ml-2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors"
-                      >
-                        {getSortIcon(column.accessor) || (
-                          <div className="flex flex-col">
-                            <ChevronUp className="w-3 h-3 -mb-1 opacity-50" />
-                            <ChevronDown className="w-3 h-3 opacity-50" />
-                          </div>
-                        )}
-                      </button>
-                    )}
+                  <div className="flex items-center gap-2">
+                    <span>Grouped Data</span>
+                    <span className="text-xs text-gray-500">
+                      (Grouped by: {groupedColumns.map(col => columnHeaders[col]).join(', ')})
+                    </span>
                   </div>
                 </th>
-              ))}
+              ) : (
+                columns.map(column => (
+                  <th
+                    key={column.id}
+                    className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300 border-r border-gray-200 dark:border-gray-600 last:border-r-0 cursor-move"
+                    style={{
+                      width: column.width,
+                      minWidth: column.minWidth || 100
+                    }}
+                    draggable
+                    onDragStart={(e) => handleDragStart(e, column.id)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span>{column.header}</span>
+                        {column.filterable && !isGrouped && (
+                          <InlineFilter
+                            value={state.filters[column.accessor] || ''}
+                            onFilterChange={(value) => handleFilter(column.accessor, value)}
+                            placeholder={`Filter ${column.header}...`}
+                          />
+                        )}
+                      </div>
+                      {column.sortable && !isGrouped && (
+                        <button
+                          onClick={() => handleSort(column.accessor)}
+                          className="ml-2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors"
+                        >
+                          {getSortIcon(column.accessor) || (
+                            <div className="flex flex-col">
+                              <ChevronUp className="w-3 h-3 -mb-1 opacity-50" />
+                              <ChevronDown className="w-3 h-3 opacity-50" />
+                            </div>
+                          )}
+                        </button>
+                      )}
+                    </div>
+                  </th>
+                ))
+              )}
             </tr>
           </thead>
           {!showVirtualization && (
