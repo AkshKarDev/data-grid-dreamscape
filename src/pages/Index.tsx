@@ -1,11 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import ReusableDataGrid from '@/components/ReusableDataGrid';
-import { Column, DataGridConfig, DataGridEvents } from '@/types/DataGridTypes';
-import { sampleEmployees } from '@/data/sampleData';
-import { largeSampleEmployees } from '@/data/largeSampleData';
+import { DataGridConfig, DataGridEvents } from '@/types/DataGridTypes';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowRight, Database } from 'lucide-react';
+import { Database, BarChart3, TrendingUp, Play, Pause, Users, Edit3, Filter, Columns } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const Index = () => {
