@@ -1,18 +1,18 @@
 
 import React, { useState } from 'react';
-import DataGrid, { Column } from '@/components/DataGrid';
+import ReusableDataGrid from '@/components/ReusableDataGrid';
+import { Column, DataGridConfig, DataGridEvents } from '@/types/DataGridTypes';
 import { sampleEmployees } from '@/data/sampleData';
 import { largeSampleEmployees } from '@/data/largeSampleData';
 import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
 
 const Index = () => {
   const [useLargeDataset, setUseLargeDataset] = useState(false);
-  const [streamingEnabled, setStreamingEnabled] = useState(false);
-  const [editingEnabled, setEditingEnabled] = useState(true);
-  const [virtualizationEnabled, setVirtualizationEnabled] = useState(false);
-  const [selectionMode, setSelectionMode] = useState<'single' | 'multiple'>('multiple');
+  const [currentData, setCurrentData] = useState(sampleEmployees);
+  const { toast } = useToast();
   
-  const currentData = useLargeDataset ? largeSampleEmployees : sampleEmployees;
+  const currentDataSource = useLargeDataset ? largeSampleEmployees : currentData;
 
   const columns: Column[] = [
     {
@@ -23,7 +23,8 @@ const Index = () => {
       filterable: true,
       editable: true,
       width: 200,
-      minWidth: 150
+      minWidth: 150,
+      type: 'text'
     },
     {
       id: 'email',
@@ -33,7 +34,8 @@ const Index = () => {
       filterable: true,
       editable: true,
       width: 250,
-      minWidth: 200
+      minWidth: 200,
+      type: 'text'
     },
     {
       id: 'department',
@@ -43,7 +45,8 @@ const Index = () => {
       filterable: true,
       editable: true,
       width: 150,
-      minWidth: 120
+      minWidth: 120,
+      type: 'text'
     },
     {
       id: 'position',
@@ -53,7 +56,8 @@ const Index = () => {
       filterable: true,
       editable: true,
       width: 200,
-      minWidth: 150
+      minWidth: 150,
+      type: 'text'
     },
     {
       id: 'salary',
@@ -63,7 +67,9 @@ const Index = () => {
       filterable: false,
       editable: true,
       width: 120,
-      minWidth: 100
+      minWidth: 100,
+      type: 'number',
+      formatter: (value) => `$${value?.toLocaleString() || 0}`
     },
     {
       id: 'startDate',
@@ -73,7 +79,8 @@ const Index = () => {
       filterable: false,
       editable: false,
       width: 120,
-      minWidth: 100
+      minWidth: 100,
+      type: 'date'
     },
     {
       id: 'status',
@@ -83,7 +90,8 @@ const Index = () => {
       filterable: true,
       editable: true,
       width: 100,
-      minWidth: 80
+      minWidth: 80,
+      type: 'text'
     },
     {
       id: 'location',
@@ -93,19 +101,108 @@ const Index = () => {
       filterable: true,
       editable: true,
       width: 150,
-      minWidth: 120
+      minWidth: 120,
+      type: 'text'
     }
   ];
+
+  const config: DataGridConfig = {
+    pageSize: 8,
+    selectable: true,
+    editable: true,
+    streaming: true,
+    streamingInterval: 3000,
+    streamingBatchSize: 3,
+    virtualized: false,
+    virtualizedHeight: 500,
+    selectionMode: 'multiple',
+    enableGrouping: true,
+    enableSorting: true,
+    enableFiltering: true,
+    showToolbar: true,
+    showPagination: true
+  };
+
+  const events: DataGridEvents = {
+    onRowSelect: (selectedRows, selectedIndexes) => {
+      console.log('Rows selected:', selectedRows, selectedIndexes);
+      toast({
+        title: 'Selection Changed',
+        description: `${selectedRows.length} row(s) selected`,
+      });
+    },
+    onCellEdit: (rowIndex, columnId, oldValue, newValue) => {
+      console.log('Cell edited:', { rowIndex, columnId, oldValue, newValue });
+      toast({
+        title: 'Cell Updated',
+        description: `${columnId} changed from "${oldValue}" to "${newValue}"`,
+      });
+      
+      // Update the local data
+      const newData = [...currentData];
+      if (newData[rowIndex]) {
+        newData[rowIndex] = { ...newData[rowIndex], [columnId]: newValue };
+        setCurrentData(newData);
+      }
+    },
+    onSort: (column, direction) => {
+      console.log('Sort changed:', { column, direction });
+      toast({
+        title: 'Sort Applied',
+        description: `Sorted by ${column} (${direction})`,
+      });
+    },
+    onFilter: (filters) => {
+      console.log('Filters changed:', filters);
+      const activeFilters = Object.entries(filters).filter(([_, value]) => value).length;
+      if (activeFilters > 0) {
+        toast({
+          title: 'Filters Applied',
+          description: `${activeFilters} filter(s) active`,
+        });
+      }
+    },
+    onPageChange: (page, pageSize) => {
+      console.log('Page changed:', { page, pageSize });
+    },
+    onDataChange: (data) => {
+      console.log('Data changed:', data.length, 'rows');
+      setCurrentData(data);
+    },
+    onGroupChange: (groupedColumns) => {
+      console.log('Grouping changed:', groupedColumns);
+      if (groupedColumns.length > 0) {
+        toast({
+          title: 'Grouping Applied',
+          description: `Grouped by: ${groupedColumns.join(', ')}`,
+        });
+      }
+    },
+    onSelectionModeChange: (mode) => {
+      console.log('Selection mode changed:', mode);
+      toast({
+        title: 'Selection Mode Changed',
+        description: `Mode: ${mode}`,
+      });
+    },
+    onVirtualizationToggle: (enabled) => {
+      console.log('Virtualization toggled:', enabled);
+      toast({
+        title: 'Virtualization',
+        description: enabled ? 'Enabled' : 'Disabled',
+      });
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8 text-center">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-4">
-            Advanced Data Grid with Editing & Virtualization
+            Reusable Data Grid Component
           </h1>
           <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto mb-6">
-            A powerful data grid with inline editing, single/multi-row selection, DOM virtualization, live streaming, and dark/light theme support.
+            A fully reusable data grid with customizable properties, data sources, and comprehensive event handling.
           </p>
           
           <div className="flex justify-center gap-4 mb-6 flex-wrap">
@@ -121,54 +218,36 @@ const Index = () => {
             >
               Large Dataset (1000 rows)
             </Button>
-            <Button
-              variant={streamingEnabled ? "default" : "outline"}
-              onClick={() => setStreamingEnabled(!streamingEnabled)}
-            >
-              {streamingEnabled ? 'Disable' : 'Enable'} Live Streaming
-            </Button>
-            <Button
-              variant={virtualizationEnabled ? "default" : "outline"}
-              onClick={() => setVirtualizationEnabled(!virtualizationEnabled)}
-            >
-              {virtualizationEnabled ? 'Disable' : 'Enable'} Virtualization
-            </Button>
           </div>
         </div>
 
         <div className="max-w-7xl mx-auto">
-          <DataGrid
-            data={currentData}
+          <ReusableDataGrid
+            data={currentDataSource}
             columns={columns}
-            pageSize={8}
-            selectable={true}
-            editable={editingEnabled}
-            streaming={streamingEnabled}
-            streamingInterval={3000}
-            streamingBatchSize={3}
-            virtualized={virtualizationEnabled}
-            virtualizedHeight={500}
-            selectionMode={selectionMode}
+            config={config}
+            events={events}
+            className="shadow-xl"
           />
         </div>
 
         <div className="mt-8 text-center">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
             <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md border border-gray-200 dark:border-gray-700">
-              <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">✏️ Inline Editing</h3>
-              <p className="text-gray-600 dark:text-gray-400">Click on any cell to edit data directly in the grid.</p>
+              <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">🔧 Configurable</h3>
+              <p className="text-gray-600 dark:text-gray-400">Easily configure features through props and config object.</p>
             </div>
             <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md border border-gray-200 dark:border-gray-700">
-              <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">🎯 Selection Modes</h3>
-              <p className="text-gray-600 dark:text-gray-400">Choose between single or multiple row selection modes.</p>
+              <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">📊 Data Driven</h3>
+              <p className="text-gray-600 dark:text-gray-400">Pass any data source and column configuration.</p>
             </div>
             <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md border border-gray-200 dark:border-gray-700">
-              <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">🚀 Virtualization</h3>
-              <p className="text-gray-600 dark:text-gray-400">DOM virtualization for smooth performance with large datasets.</p>
+              <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">🎯 Event Driven</h3>
+              <p className="text-gray-600 dark:text-gray-400">Handle all user interactions through event callbacks.</p>
             </div>
             <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md border border-gray-200 dark:border-gray-700">
-              <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">🎨 Theme Support</h3>
-              <p className="text-gray-600 dark:text-gray-400">Switch between light and dark themes with full grid support.</p>
+              <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">♻️ Reusable</h3>
+              <p className="text-gray-600 dark:text-gray-400">Drop into any project with minimal setup required.</p>
             </div>
           </div>
         </div>
