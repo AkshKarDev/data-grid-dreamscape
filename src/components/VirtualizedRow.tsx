@@ -72,7 +72,6 @@ const VirtualizedRow: React.FC<VirtualizedRowProps> = ({
             {isEditing ? (
               <EditableCell
                 value={cellValue}
-                type={column.type || 'text'}
                 onSave={(value) => {
                   onUpdateCell(index, column.id, value);
                   onStopEditing();

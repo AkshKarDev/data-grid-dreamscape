@@ -9,6 +9,7 @@ import Index from "./pages/Index";
 import LargeDatasetDemo from "./pages/LargeDatasetDemo";
 import TradeRiskDemo from "./pages/TradeRiskDemo";
 import NotFound from "./pages/NotFound";
+import Examples from "./examples";
 
 const queryClient = new QueryClient();
 
@@ -20,7 +21,8 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<Index />} />
+            <Route path="/" element={<Examples />} />
+            <Route path="/original" element={<Index />} />
             <Route path="/large-demo" element={<LargeDatasetDemo />} />
             <Route path="/trade-risk" element={<TradeRiskDemo />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
